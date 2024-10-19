@@ -1,0 +1,1 @@
+This workshop introduces the gt and gtExtra packages, powerful tools in R for creating professional, presentation-ready tables. You’ll learn how to build and customize tables with these packages, which are essential for reporting and visualizing data effectively.
