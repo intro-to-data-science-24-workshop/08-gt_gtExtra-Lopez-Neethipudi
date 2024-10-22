@@ -1,175 +1,264 @@
 ---
-title: "Creating Tables with gt and gtExtra"
-author: "Elena Ujwal"
+title: "Creating presentation - ready tables with gt and gtExtras"
+author: "Elena Mijares Lopez and Ujwal Neethipudi"
 date: "`r Sys.Date()`"
-output: html_document
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: cosmo
 ---
-## R Markdown
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+## Introduction
 
-In this workshop, we will explore how to create tables using the gt package, and the gtExtra package, utilizing the pizzaplace dataset. We will start with a basic table using base R to display pizza information, then enhance our visualization using the gt package to create a more polished and user-friendly table. Finally, we will upgrade our visualization further with the gtExtra package, adding even more features and styles to improve the overall presentation of our pizza menu.
-
-
-Step 1: Create a Basic Table Using Base R:
-
-Objective: Introduce participants to the fundamental concepts of creating tables in R.
-
-Action: We will start by loading the pizzaplace dataset and displaying a simple table using base R functions. This will help us understand how data is structured and presented in a tabular format without any additional packages.
+In this workshop, we will explore how to create tables using the gt and gtExtras packages, utilizing the pizza place dataset. We will start with a basic table using base R to display pizza information, then enhance our visualization using the gt package to create a more polished and user-friendly table. Finally, we will upgrade our visualization further with the gtExtras package, adding even more features and styles to improve the overall presentation of our pizza menu.
 
 ```{r setup, include=FALSE}
-#Install and load gt package
-library(gt)
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
 library(dplyr)
-#Glimpse of built-in dataset pizzaplace
-print(pizzaplace)
-
-# Create a basic table using base R
-basic_table <- pizzaplace %>%
-  select(name, price, type) %>%  # Selecting relevant columns
-  head(10)                       # Displaying first 10 rows
-
-# Print the basic table
-print(basic_table)
-
-
+library(gt)
+library(gtExtras)
+library(svglite)
 ```
 
-Step 2: Enhance Visualization Using the gt Package:
+## The Data
 
-Objective: Familiarize participants with the gt package and its capabilities for improving table aesthetics.
+Let's look at our pizza sales dataset:
 
-Action: After establishing a basic understanding of table creation, we will create a more visually appealing table using the gt package. This will include styling features like headers, conditional formatting, and better overall presentation.
+```{r}
+# Load and assign the pizza dataset to an object
+data("pizzaplace")
+pizza_data <- pizzaplace
+head(pizza_data)
+```
 
+## Basic Table (Before gt)
 
-```{r pizza}
+First, let's create a summary table using basic R:
 
-# Create a polished gt table
-gt_table <- pizzaplace %>%
-  select(name, price, type) %>%  # Selecting relevant columns in lowercase
-  head(10) %>%                    # Displaying first 10 rows
-  gt() %>%
-  tab_header(
-    title = "Pizza Place Menu",
-    subtitle = "Top 10 Pizzas"
+```{r}
+pizza_summary <- pizza_data %>%
+  group_by(type, size) %>%
+  summarize(
+    total_sales = sum(price),
+    num_orders = n(),
+    avg_price = mean(price),
+    .groups = 'drop'
+  )
+
+# Display as basic table
+print(pizza_summary)
+```
+
+## Basic gt Features
+
+### Step 1: Basic gt Table
+
+Let's start with a simple gt table:
+
+```{r}
+pizza_summary %>%
+  gt(
+    groupname_col = "type"
+  )
+```
+
+### Step 2: Adding Formatting
+
+Now let's add currency and number formatting:
+
+```{r}
+pizza_summary %>%
+  gt(
+    groupname_col = "type"
   ) %>%
-  fmt_currency(columns = price, currency = "USD") %>%
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
+  ) %>%
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
+  )
+```
+
+### Step 3: Adding Headers and Labels
+
+Let's improve the presentation with better headers:
+
+```{r}
+pizza_summary %>%
+  gt(
+    groupname_col = "type"
+  ) %>%
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
+  ) %>%
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
+  ) %>%
+  tab_header(
+    title = "Pizza Sales Analysis",
+    subtitle = "Sales breakdown by type and size"
+  ) %>%
   cols_label(
-    name = "Pizza Name",
-    price = "Price (USD)",
-    type = "Pizza Type"
-  ) %>%
-  tab_options(
-    table.font.size = 14,                 # Slightly larger font size
-    table.width = pct(100),                # Full width
-    table.background.color = "#ffffff",    # White background for clarity
-    column_labels.background.color = "#4F8C9B"  # Dark teal for header background
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#eaf3f3"),        # Light teal for all rows
-      cell_text(weight = "bold")            # Bold text for emphasis
-    ),
-    locations = cells_body()
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#d9f0d3")          # Light green for Veg pizzas
-    ),
-    locations = cells_body(
-      columns = type,
-      rows = type == "Veg"  # Color coding based on condition
-    )
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#ffe6e6")          # Light pink for Non-Veg pizzas
-    ),
-    locations = cells_body(
-      columns = type,
-      rows = type == "Non-Veg"  # Color for Non-Veg pizzas
-    )
-  ) %>%
-  tab_style(
-    style = list(
-      cell_text(color = "#4F8C9B")           # Dark teal text for prices
-    ),
-    locations = cells_body(columns = price)
-  ) %>%
-  tab_style(
-    style = list(
-      cell_text(weight = "bold")             # Bold text for price
-    ),
-    locations = cells_body(columns = price)
+    total_sales = "Total Sales",
+    num_orders = "Number of Orders",
+    avg_price = "Average Price",
+    size = "Pizza Size"
   )
-
-# Print the polished gt table
-gt_table
-
 ```
 
-Step 3: Upgrade Visualization Further with gtExtra:
+### Step 4: Adding Visual Elements with gtExtras
 
-Objective: Introduce participants to the gtExtra package and how it builds upon the gt package.
+Now let's add some visual enhancements:
 
-Action: We will enhance our gt table even more by using gtExtra to add advanced features like additional styling and interactive elements.
-
-```{r pressure, echo=FALSE}
-#Install package gtExtra
-
-# Create an enhanced gtExtra table based on the existing gt_table
-gt_extra_table <- gt_table %>%
-  tab_options(
-    table.background.color = "#F8F8F8",  # Light grey background for the overall table
-    row.striping.include_table_body = TRUE  # Enable row striping for readability
+```{r}
+pizza_summary %>%
+  gt(
+    groupname_col = "type"
   ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#e9ecef")  # Light grey for alternate row striping
-    ),
-    locations = cells_body(rows = seq(1, 10, by = 2))  # Apply to odd rows (1, 3, 5,...)
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
   ) %>%
-  tab_style(
-    style = list(
-      cell_text(color = "black")      # Black text for better contrast
-    ),
-    locations = cells_body()
-  ) %>%
-  tab_footnote(
-    footnote = "Prices are in USD.",
-    locations = cells_title("title")   # Add footnote to the title
-  ) %>%
-  cols_align(
-    align = "center",
-    columns = vars(name, price, type)  # Center align columns for aesthetics
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#f0f8ff"),  # Light blue for the title and subtitle
-      cell_text(weight = "bold")
-    ),
-    locations = cells_title(groups = "title")  # Style title
-  ) %>%
-  tab_style(
-    style = list(
-      cell_fill(color = "#f0f8ff"),  # Light blue for subtitle
-      cell_text(weight = "bold")
-    ),
-    locations = cells_title(groups = "subtitle")  # Style subtitle
-  ) %>%
-  cols_width(
-    name ~ px(150),      # Set specific width for columns
-    price ~ px(100),
-    type ~ px(120)
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
   ) %>%
   tab_header(
-    title = md("**Pizza Place Menu**"),   # Use markdown for title styling
-    subtitle = md("**Top 10 Pizzas**")    # Use markdown for subtitle styling
+    title = "Pizza Sales Analysis",
+    subtitle = "Sales breakdown by type and size"
+  ) %>%
+  cols_label(
+    total_sales = "Total Sales",
+    num_orders = "Number of Orders",
+    avg_price = "Average Price",
+    size = "Pizza Size"
+  ) %>%
+  gt_theme_538() %>%
+  data_color(
+    columns = c(total_sales),
+    colors = scales::col_numeric(
+      palette = c("white", "#1F77B4"),
+      domain = NULL
+    )
   )
-
-# Print the enhanced gtExtra table
-gt_extra_table
-
 ```
 
+## Advanced Features
+
+### Sales Trends Visualization
+
+Let's create a different view focusing on pizza types:
+
+```{r}
+pizza_data %>%
+  group_by(type) %>%
+  summarize(
+    total_sales = sum(price),
+    num_orders = n(),
+    avg_price = mean(price),
+    pct_total = num_orders/nrow(pizza_data)
+  ) %>%
+  ungroup() %>%
+  gt() %>%
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
+  ) %>%
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
+  ) %>%
+  fmt_percent(
+    columns = pct_total,
+    decimals = 1
+  ) %>%
+  data_color(
+    columns = pct_total,
+    colors = scales::col_numeric(
+      palette = c("white", "steelblue"),
+      domain = NULL
+    )
+  ) %>%
+  cols_label(
+    type = "Pizza Type",
+    total_sales = "Total Sales",
+    num_orders = "Number of Orders",
+    avg_price = "Average Price",
+    pct_total = "% of Total Orders"
+  ) %>%
+  tab_header(
+    title = "Pizza Type Analysis",
+    subtitle = "Sales and order distribution by pizza type"
+  )
+```
+
+### Dark Theme Example
+
+```{r}
+pizza_data %>%
+  group_by(type) %>%
+  summarize(
+    total_sales = sum(price),
+    num_orders = n(),
+    avg_price = mean(price)
+  ) %>%
+  gt() %>%
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
+  ) %>%
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
+  ) %>%
+  gt_theme_dark() %>%
+  tab_header(
+    title = "Pizza Sales in Dark Theme",
+    subtitle = "A different perspective on our data"
+  )
+```
+
+### Summary Rows Feature
+
+```{r}
+pizza_data %>%
+  group_by(type) %>%
+  summarize(
+    total_sales = sum(price),
+    num_orders = n(),
+    avg_price = mean(price)
+  ) %>%
+  ungroup() %>%
+  gt(
+    groupname_col = "type"
+  ) %>%
+  fmt_currency(
+    columns = c(total_sales, avg_price),
+    currency = "USD"
+  ) %>%
+  fmt_number(
+    columns = num_orders,
+    decimals = 0
+  ) %>%
+  grand_summary_rows(
+    columns = total_sales,
+    fns = list(
+      "Total" = ~sum(.)
+    ),
+    fmt = ~ fmt_currency(., currency = "USD")  
+  ) %>%
+  grand_summary_rows(
+    columns = num_orders,
+    fns = list(
+      "Total" = ~sum(.)
+    ),
+    fmt = ~ fmt_number(., decimals = 0)  
+  )
+
+```
 
