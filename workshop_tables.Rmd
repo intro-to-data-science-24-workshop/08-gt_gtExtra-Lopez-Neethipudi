@@ -2,7 +2,7 @@
 title: "Creating presentation - ready tables with gt and gtExtras"
 author: "Elena Mijares Lopez and Ujwal Neethipudi"
 date: "`r Sys.Date()`"
-output: 
+output:
   html_document:
     toc: true
     toc_float: true
@@ -19,6 +19,7 @@ library(dplyr)
 library(gt)
 library(gtExtras)
 library(svglite)
+library(tidyverse)
 ```
 
 ## The Data
@@ -156,44 +157,84 @@ Let's create a different view focusing on pizza types:
 
 ```{r}
 pizza_data %>%
+  # First calculate the total number of orders
+  mutate(total_orders = n()) %>%
   group_by(type) %>%
   summarize(
     total_sales = sum(price),
     num_orders = n(),
     avg_price = mean(price),
-    pct_total = num_orders/nrow(pizza_data)
+    pct_total = num_orders/first(total_orders) * 100  # Fixed percentage calculation
   ) %>%
   ungroup() %>%
   gt() %>%
-  fmt_currency(
-    columns = c(total_sales, avg_price),
-    currency = "USD"
+  # Basic formatting
+  fmt_currency(columns = c(total_sales, avg_price), currency = "USD") %>%
+  fmt_number(columns = num_orders, decimals = 0) %>%
+  fmt_percent(columns = pct_total, decimals = 1) %>%
+  
+  # Enhanced styling
+  gt_theme_nytimes() %>%
+  
+  # Add mini charts
+  gt_plt_bar_pct(column = pct_total, scaled = TRUE) %>%
+  
+  # Enhanced header
+  tab_header(
+    title = md("**🍕 Pizza Sales Performance Analysis**"),
+    subtitle = md("*Distribution of sales across pizza types*")
   ) %>%
-  fmt_number(
-    columns = num_orders,
-    decimals = 0
+  
+  # Column formatting
+  cols_width(
+    type ~ px(150),
+    total_sales ~ px(200)
   ) %>%
-  fmt_percent(
-    columns = pct_total,
-    decimals = 1
+  
+  # Conditional formatting
+  tab_style(
+    style = list(
+      cell_fill(color = "#e8f4f8"),
+      cell_text(weight = "bold")
+    ),
+    locations = cells_body(
+      columns = num_orders,
+      rows = num_orders > mean(num_orders)
+    )
   ) %>%
+  
+  # Color gradient for total sales
   data_color(
-    columns = pct_total,
+    columns = total_sales,
     colors = scales::col_numeric(
       palette = c("white", "steelblue"),
       domain = NULL
     )
   ) %>%
-  cols_label(
-    type = "Pizza Type",
-    total_sales = "Total Sales",
-    num_orders = "Number of Orders",
-    avg_price = "Average Price",
-    pct_total = "% of Total Orders"
+  
+  # Footer elements
+  tab_footnote(
+    footnote = "Higher than average sales",
+    locations = cells_body(
+      columns = total_sales,
+      rows = total_sales > mean(total_sales)
+    )
   ) %>%
-  tab_header(
-    title = "Pizza Type Analysis",
-    subtitle = "Sales and order distribution by pizza type"
+  tab_source_note(
+    source_note = md("*Data source: Pizza Place Sales*")
+  ) %>%
+  
+  # Table options
+  tab_options(
+    heading.title.font.size = px(24),
+    heading.subtitle.font.size = px(16),
+    heading.background.color = "#f6f6f6",
+    column_labels.background.color = "#e6e6e6",
+    table.border.top.width = px(3),
+    table.border.top.color = "#4A4A4A",
+    column_labels.font.weight = "bold",
+    data_row.padding = px(12),
+    source_notes.font.size = px(10)
   )
 ```
 
@@ -205,21 +246,124 @@ pizza_data %>%
   summarize(
     total_sales = sum(price),
     num_orders = n(),
-    avg_price = mean(price)
+    avg_price = mean(price),
+    sales_trend = list(tapply(price, date, mean))
   ) %>%
   gt() %>%
+  
+  # Make sure currency formatting is applied after theme
+  gt_theme_dark() %>%
+  
+  # Format numbers
   fmt_currency(
     columns = c(total_sales, avg_price),
-    currency = "USD"
+    currency = "USD",
+    placement = "right",
+    decimals = 2,
+    use_subunits = TRUE
   ) %>%
   fmt_number(
     columns = num_orders,
-    decimals = 0
+    decimals = 0,
+    use_seps = TRUE
   ) %>%
-  gt_theme_dark() %>%
+  
+  # Sparkline and bar plots
+  gt_plt_sparkline(sales_trend, label = FALSE) %>%
+  
+  # Remove bar plot for total_sales to ensure numbers are visible
+  # gt_plt_bar(column = total_sales, color = "steelblue", width = 65) %>%
+  
+  # Header styling
   tab_header(
-    title = "Pizza Sales in Dark Theme",
-    subtitle = "A different perspective on our data"
+    title = md("🌙 Night Mode Sales Dashboard"),
+    subtitle = md("*Visualization of pizza sales*")
+  ) %>%
+  
+  # Column labels
+  cols_label(
+    type = md("**Pizza Type**"),
+    total_sales = md("**Total Revenue**"),
+    num_orders = md("**Orders**"),
+    avg_price = md("**Avg. Price**"),
+    sales_trend = md("**Sales Trend**")
+  ) %>%
+  
+  # Column alignment
+  cols_align(
+    align = "left",
+    columns = type
+  ) %>%
+  cols_align(
+    align = "center",
+    columns = c(num_orders, sales_trend)
+  ) %>%
+  cols_align(
+    align = "right",
+    columns = c(total_sales, avg_price)
+  ) %>%
+  
+  # Column width adjustments
+  cols_width(
+    type ~ px(150),
+    total_sales ~ px(180),
+    num_orders ~ px(120),
+    avg_price ~ px(120),
+    sales_trend ~ px(150)
+  ) %>%
+  
+  # Add borders and styling
+  tab_style(
+    style = list(
+      cell_borders(
+        sides = c("left", "right"),
+        color = "#404040",
+        weight = px(1)
+      )
+    ),
+    locations = cells_body()
+  ) %>%
+  
+  # Highlight highest values
+  tab_style(
+    style = list(
+      cell_fill(color = "#2d4a54"),
+      cell_text(weight = "bold", color = "white")  # Ensure text is visible
+    ),
+    locations = cells_body(
+      columns = total_sales,
+      rows = total_sales == max(total_sales)
+    )
+  ) %>%
+  
+  # Add row striping
+  opt_row_striping() %>%
+  
+  # Table styling
+  tab_options(
+    table.background.color = "#1a1a1a",
+    heading.title.font.size = px(28),
+    heading.subtitle.font.size = px(18),
+    heading.padding = px(20),
+    column_labels.background.color = "#2d2d2d",
+    column_labels.font.weight = "bold",
+    column_labels.padding = px(15),
+    table.border.top.style = "solid",
+    table.border.top.width = px(3),
+    table.border.top.color = "white",
+    table.border.bottom.color = "white",
+    table.border.bottom.width = px(3),
+    column_labels.border.bottom.color = "white",
+    column_labels.border.bottom.width = px(2),
+    data_row.padding = px(12),
+    row.striping.background_color = "#2a2a2a",
+    table.font.color = "white",
+    table.font.size = px(14)
+  ) %>%
+  
+  # Add source note
+  tab_source_note(
+    source_note = md("*Data source: Pizza Place Sales Dataset*")
   )
 ```
 
@@ -260,5 +404,190 @@ pizza_data %>%
     fmt = ~ fmt_number(., decimals = 0)  
   )
 
+```
+
+## Final Demo
+
+### A Pizza Pricing Table Using the gt and gtExtras
+
+```{r}
+# First create the pricing structure with features
+pizza_pricing <- pizza_data %>%
+  group_by(type, size) %>%
+  summarize(
+    price = mean(price),
+    .groups = 'drop'
+  ) %>%
+  group_by(type) %>%
+  summarize(
+    basic = min(price),
+    medium = median(price),
+    large = max(price)
+  ) %>%
+  mutate(
+    type_display = case_when(
+      type == "chicken" ~ "🍗 Chicken Lovers",
+      type == "classic" ~ "🍕 Classic Choice",
+      type == "supreme" ~ "👑 Supreme Selection",
+      type == "veggie" ~ "🥬 Veggie Delight"
+    ),
+    features = case_when(
+      type == "chicken" ~ "✓ Fresh chicken ✓ Special herbs ✓ Premium cheese",
+      type == "classic" ~ "✓ Traditional sauce ✓ Classic toppings ✓ Family favorite",
+      type == "supreme" ~ "✓ Premium toppings ✓ Extra cheese ✓ Special blend",
+      type == "veggie" ~ "✓ Fresh vegetables ✓ Light cheese ✓ Herb-infused"
+    )
+  )
+
+# Create the enhanced pricing table
+pizza_pricing %>%
+  select(type_display, features, basic, medium, large) %>%
+  gt() %>%
+  tab_header(
+    title = md("🌟 **Premium Pizza Price Plans** 🌟"),
+    subtitle = md("*Explore our range of artisanal pizzas crafted just for you*")
+  ) %>%
+  
+  cols_label(
+    type_display = "",
+    features = md("**Includes**"),
+    basic = md("**Basic Plan**"),
+    medium = md("**Premium Plan**"),
+    large = md("**Deluxe Plan**")
+  ) %>%
+  
+  fmt_currency(
+    columns = c(basic, medium, large),
+    currency = "USD"
+  ) %>%
+  
+  # Style plan headers
+  tab_style(
+    style = list(
+      cell_fill(color = "#4287f5"),
+      cell_text(color = "white", weight = "bold", size = px(14)),
+      cell_borders(sides = "all", color = "white", weight = px(2))
+    ),
+    locations = cells_column_labels(columns = basic)
+  ) %>%
+  
+  tab_style(
+    style = list(
+      cell_fill(color = "#2ecc71"),
+      cell_text(color = "white", weight = "bold", size = px(14)),
+      cell_borders(sides = "all", color = "white", weight = px(2))
+    ),
+    locations = cells_column_labels(columns = medium)
+  ) %>%
+  
+  tab_style(
+    style = list(
+      cell_fill(color = "#e74c3c"),
+      cell_text(color = "white", weight = "bold", size = px(14)),
+      cell_borders(sides = "all", color = "white", weight = px(2))
+    ),
+    locations = cells_column_labels(columns = large)
+  ) %>%
+  
+  # Style pizza types
+  tab_style(
+    style = list(
+      cell_text(weight = "bold", size = px(14)),
+      cell_fill(color = "#f8f9fa"),
+      cell_borders(sides = "all", color = "#dee2e6", weight = px(1))
+    ),
+    locations = cells_body(columns = type_display)
+  ) %>%
+  
+  # Add borders
+  tab_style(
+    style = list(
+      cell_borders(sides = "all", color = "#dee2e6", weight = px(2))
+    ),
+    locations = cells_body()
+  ) %>%
+  
+  # Alignment
+  cols_align(
+    align = "center",
+    columns = c(basic, medium, large)
+  ) %>%
+  
+  cols_align(
+    align = "left",
+    columns = c(type_display, features)
+  ) %>%
+  
+  # Column widths
+  cols_width(
+    type_display ~ px(180),
+    features ~ px(250),
+    everything() ~ px(150)
+  ) %>%
+  
+  # Add plan features spanner
+  tab_spanner(
+    label = md("**🎯 Select Your Perfect Plan 🎯**"),
+    columns = c(basic, medium, large)
+  ) %>%
+  
+  # Style the prices
+  tab_style(
+    style = list(
+      cell_text(weight = "bold", size = px(16)),
+      cell_fill(color = "#ffffff")
+    ),
+    locations = cells_body(
+      columns = c(basic, medium, large)
+    )
+  ) %>%
+  
+  # Add row striping
+  opt_row_striping(row_striping = TRUE) %>%
+  
+  # Table styling
+  tab_options(
+    heading.background.color = "#f8f9fa",
+    heading.title.font.size = px(28),
+    heading.subtitle.font.size = px(16),
+    heading.padding = px(20),
+    column_labels.background.color = "#f8f9fa",
+    table.border.top.width = px(3),
+    table.border.bottom.width = px(3),
+    table.border.top.color = "#4e73df",
+    table.border.bottom.color = "#4e73df",
+    data_row.padding = px(15),
+    row.striping.background_color = "#f9f9f9",
+    heading.title.font.weight = "bold"
+  ) %>%
+  
+  # Add features styling
+  tab_style(
+    style = list(
+      cell_borders(sides = "all", color = "#dee2e6", weight = px(1)),
+      cell_fill(color = "#e8f4f8")
+    ),
+    locations = cells_body(columns = features)
+  ) %>%
+  
+  # Add badges/footnotes
+  tab_footnote(
+    footnote = md("🔥 **Most Popular Choice**"),
+    locations = cells_column_labels(columns = medium)
+  ) %>%
+  
+  tab_footnote(
+    footnote = md("⭐ **Best Value**"),
+    locations = cells_column_labels(columns = large)
+  ) %>%
+  
+  # Source notes
+  tab_source_note(
+    source_note = md(
+      "✨ *All plans include our signature sauce and premium cheese*  |  
+      🛵 *Free delivery on orders over $30*  |  
+      💫 *Customization available for all plans*"
+    )
+  )
 ```
 
