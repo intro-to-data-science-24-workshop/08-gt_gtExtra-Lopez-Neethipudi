@@ -251,7 +251,6 @@ pizza_data %>%
   ) %>%
   gt() %>%
   
-  # Make sure currency formatting is applied after theme
   gt_theme_dark() %>%
   
   # Format numbers
@@ -271,7 +270,6 @@ pizza_data %>%
   # Sparkline and bar plots
   gt_plt_sparkline(sales_trend, label = FALSE) %>%
   
-  # Remove bar plot for total_sales to ensure numbers are visible
   # gt_plt_bar(column = total_sales, color = "steelblue", width = 65) %>%
   
   # Header styling
@@ -444,7 +442,7 @@ pizza_pricing %>%
   select(type_display, features, basic, medium, large) %>%
   gt() %>%
   tab_header(
-    title = md("🌟 **Premium Pizza Price Plans** 🌟"),
+    title = md("🌟 **Yummy Pizza Price Plans** 🌟"),
     subtitle = md("*Explore our range of artisanal pizzas crafted just for you*")
   ) %>%
   
