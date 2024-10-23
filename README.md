@@ -1,10 +1,23 @@
-This workshop introduces the gt and gtExtra packages, powerful tools in R for creating professional, presentation-ready tables. You’ll learn how to build and customize tables with these packages, which are essential for reporting and visualizing data effectively.
+# Introduction to Data Science Workshop
 
-Structure for the workshop:
--	Without gt
-Install dataset within the package (libraries) and create a table for visualization.
--	With gt
-Create the table with the new features.
--	With gt extra
-Create a table with new features
--	Comparision between the 3 packages/libraries and conclusion why is gt/gt extra better.
+Teaching materials for the IDS workshop focused on creating professional data tables and visualizations using the `gt` package. Uses a pizza sales dataset to demonstrate various table styling and formatting techniques.
+
+## Contents
+- Workshop slides (HTML)
+- Example code (R/RMD)
+
+## Prerequisites
+- Basic R knowledge
+- R and RStudio installed
+- Required packages:
+  - tidyverse
+  - gt
+  - gtExtras
+  
+## Getting Started
+1. Clone this repo
+2. Open the .Rmd file in RStudio
+3. Install required packages
+4. Follow along with the workshop materials
+
+Workshop materials created by Elena Mijares Lopez and Ujwal Neethipudi.
